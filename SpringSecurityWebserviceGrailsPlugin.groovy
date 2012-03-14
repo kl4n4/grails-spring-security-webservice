@@ -1,3 +1,13 @@
+import org.codehaus.groovy.grails.plugins.springsecurity.SpringSecurityUtils
+import com.tripbutler.security.RequestHeaderAuthenticationEntryPoint
+import com.tripbutler.security.RequestHeaderAuthenticationUserDetailsService
+import com.tripbutler.security.RequestHeaderAuthenticationFilter
+import com.tripbutler.security.RequestHeaderAuthenticationProvider
+import com.tripbutler.security.cache.EhCacheBasedAuthenticationCache
+import org.springframework.cache.ehcache.EhCacheFactoryBean
+import org.springframework.cache.ehcache.EhCacheManagerFactoryBean
+import org.codehaus.groovy.grails.plugins.springsecurity.SecurityFilterPosition
+
 class SpringSecurityWebserviceGrailsPlugin {
 	// the plugin version
 	def version = "0.1"
@@ -26,15 +36,60 @@ class SpringSecurityWebserviceGrailsPlugin {
 	// make sure the filter is after the Spring Security filter chain filter
 	def getWebXmlFilterOrder() {
 		def FilterManager = getClass().getClassLoader().loadClass('grails.plugin.webxml.FilterManager')
-		[springSecurityFilterChain: FilterManager.GRAILS_WEB_REQUEST_POSITION + 110]
-	}
-
-	def doWithWebDescriptor = { xml ->
-		// TODO Implement additions to web.xml (optional), this event occurs before
+		[ responseSigningFilter: FilterManager.GRAILS_WEB_REQUEST_POSITION + 110 ]
 	}
 
 	def doWithSpring = {
-		// TODO Implement runtime spring config (optional)
+		def conf = SpringSecurityUtils.securityConfig
+		if (!conf || !conf.active) {
+			return
+		}
+
+		SpringSecurityUtils.loadSecondaryConfig('DefaultWebserviceSecurityConfig')
+
+		// have to reload again after overlaying DefaultWebserviceSecurityConfig
+		conf = SpringSecurityUtils.securityConfig
+
+		if (!conf.webserviceSecurity.active) {
+			return
+		}
+
+		println 'Configuring Spring Security for Web Services ...'
+		SpringSecurityUtils.registerProvider('requestHeaderAuthenticationProvider')
+		SpringSecurityUtils.registerFilter('requestHeaderAuthenticationFilter', SecurityFilterPosition.BASIC_AUTH_FILTER)
+
+		authenticationEntryPoint(RequestHeaderAuthenticationEntryPoint)
+
+		requestHeaderAuthenticationUserDetailsService(RequestHeaderAuthenticationUserDetailsService) {
+			grailsApplication = ref('grailsApplication')
+		}
+
+		requestHeaderAuthenticationFilter(RequestHeaderAuthenticationFilter) {
+			authenticationManager = ref("authenticationManager")
+			rememberMeServices = ref("rememberMeServices")
+			springSecurityService = ref("securityService")
+			authenticationEntryPoint = ref('authenticationEntryPoint')
+			signedRequestHeaderUtil = ref('signedRequestHeaderUtil')
+			anonymousAuthenticationFilter = ref('anonymousAuthenticationFilter')
+		}
+
+		requestHeaderAuthenticationProvider(RequestHeaderAuthenticationProvider) {
+			authenticationCache = ref('authenticationCache')
+			signedRequestHeaderUtil = ref('signedRequestHeaderUtil')
+			userDetailsService = ref("requestHeaderAuthenticationUserDetailsService")
+		}
+
+		/**
+		 * Cache (for Authentication)
+		 */
+		authenticationCache(EhCacheBasedAuthenticationCache) {
+			cache = ref('securityAuthenticationCache')
+		}
+		securityAuthenticationCache(EhCacheFactoryBean) {
+			cacheManager = ref('cacheManager')
+			cacheName = 'authenticationCache'
+		}
+		cacheManager(EhCacheManagerFactoryBean)
 	}
 
 	def doWithDynamicMethods = { ctx ->
