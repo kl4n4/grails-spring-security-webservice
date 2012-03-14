@@ -10,33 +10,24 @@ class SpringSecurityWebserviceGrailsPlugin {
 			"grails-app/views/error.gsp"
 	]
 
-	// TODO Fill in these fields
-	def title = "Spring Security Webservice Plugin" // Headline display name of the plugin
-	def author = 'Thomas "kl4n4" Klaner'
-	def authorEmail = ""
-	def description = '''\
-Grails Plugin to secure web services using spring security
-'''
-
 	// URL to the plugin's documentation
-	def documentation = "http://grails.org/plugin/spring-security-webservice"
 
-	// Extra (optional) plugin metadata
+	String author = 'Thomas Klaner'
+	String authorEmail = 'thomas@iwa-tech.com'
+	String title = 'Spring Security Webservice Plugin'
+	String description = 'Grails Plugin to secure web services using spring security'
+	String documentation = 'http://grails.org/plugin/spring-security-webservice'
 
-	// License: one of 'APACHE', 'GPL2', 'GPL3'
-//    def license = "APACHE"
+	String license = 'APACHE'
+	//def organization = [name: 'IWAtech', url: 'http://www.iwa-tech.com/']
+	def issueManagement = [system: 'GitHub', url: 'https://github.com/grails-plugins/grails-spring-security-webservice/issues']
+	def scm = [url: 'https://github.com/grails-plugins/grails-spring-security-webservice']
 
-	// Details of company behind the plugin (if there is one)
-//    def organization = [ name: "My Company", url: "http://www.my-company.com/" ]
-
-	// Any additional developers beyond the author specified above.
-//    def developers = [ [ name: "Joe Bloggs", email: "joe@bloggs.net" ]]
-
-	// Location of the plugin's issue tracker.
-//    def issueManagement = [ system: "JIRA", url: "http://jira.grails.org/browse/GPMYPLUGIN" ]
-
-	// Online location of the plugin's browseable source code.
-//    def scm = [ url: "http://svn.grails-plugins.codehaus.org/browse/grails-plugins/" ]
+	// make sure the filter is after the Spring Security filter chain filter
+	def getWebXmlFilterOrder() {
+		def FilterManager = getClass().getClassLoader().loadClass('grails.plugin.webxml.FilterManager')
+		[springSecurityFilterChain: FilterManager.GRAILS_WEB_REQUEST_POSITION + 110]
+	}
 
 	def doWithWebDescriptor = { xml ->
 		// TODO Implement additions to web.xml (optional), this event occurs before

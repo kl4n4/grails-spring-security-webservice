@@ -33,5 +33,8 @@ grails.project.dependency.resolution = {
               ":release:1.0.0") {
             export = false
         }
+
+		// hackish using 'provided' but 'build' doesn't put it in the pom
+		provided ':webxml:1.4.1'
     }
 }
